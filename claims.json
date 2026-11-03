@@ -1,0 +1,102 @@
+{
+  "claims": [
+    {
+      "id": 1,
+      "source": "@alpha_sample",
+      "asset": "SOL",
+      "direction": "above",
+      "target": 200,
+      "loggedAt": "2026-10-01T00:00:00Z",
+      "deadline": "2026-10-15T00:00:00Z",
+      "outcome": "RIGHT",
+      "resolvedAt": "2026-10-15T00:00:00Z",
+      "price": 204,
+      "demo": true
+    },
+    {
+      "id": 2,
+      "source": "@degen_demo",
+      "asset": "BTC",
+      "direction": "below",
+      "target": 90000,
+      "loggedAt": "2026-10-02T00:00:00Z",
+      "deadline": "2026-10-20T00:00:00Z",
+      "outcome": "WRONG",
+      "resolvedAt": "2026-10-20T00:00:00Z",
+      "price": 105000,
+      "demo": true
+    },
+    {
+      "id": 3,
+      "source": "@suiwatch_sample",
+      "asset": "SUI",
+      "note": "SUI DEX volume beats monthly high",
+      "loggedAt": "2026-10-03T00:00:00Z",
+      "outcome": "RIGHT",
+      "resolvedAt": "2026-10-31T00:00:00Z",
+      "demo": true
+    },
+    {
+      "id": 4,
+      "source": "@chartwizard_demo",
+      "asset": "SOL",
+      "direction": "below",
+      "target": 150,
+      "loggedAt": "2026-10-05T00:00:00Z",
+      "deadline": "2026-10-25T00:00:00Z",
+      "outcome": "WRONG",
+      "resolvedAt": "2026-10-25T00:00:00Z",
+      "price": 190,
+      "demo": true
+    },
+    {
+      "id": 5,
+      "source": "@alpha_sample",
+      "asset": "SOL",
+      "note": "launchpad fee cut before November",
+      "loggedAt": "2026-10-08T00:00:00Z",
+      "outcome": "RIGHT",
+      "resolvedAt": "2026-10-29T00:00:00Z",
+      "demo": true
+    },
+    {
+      "id": 6,
+      "source": "@ethmaxi_sample",
+      "asset": "ETH",
+      "note": "ETH/BTC above 0.04 by end of Oct",
+      "loggedAt": "2026-10-10T00:00:00Z",
+      "outcome": "WRONG",
+      "resolvedAt": "2026-10-31T00:00:00Z",
+      "demo": true
+    },
+    {
+      "id": 7,
+      "source": "@live_demo",
+      "asset": "SOL",
+      "direction": "above",
+      "target": 90,
+      "loggedAt": "2026-11-03T04:56:32.956Z",
+      "deadline": "2026-11-10",
+      "blob_id": "e2DngSNelwjWDCp0jqeRV2zrY4OGv6-88HER9TCQ68s",
+      "outcome": "RIGHT",
+      "resolvedAt": "2026-11-03T04:56:42.725Z",
+      "price": 92.18,
+      "priceSource": "coingecko-fallback (set TATUM_API_KEY)"
+    },
+    {
+      "id": 8,
+      "source": "@alpha_sample",
+      "asset": "SUI",
+      "direction": "above",
+      "target": 0.8,
+      "loggedAt": "2026-11-03T05:21:06.441Z",
+      "deadline": "2026-11-10T00:00:00Z",
+      "demo": true,
+      "outcome": "RIGHT",
+      "resolvedAt": "2026-11-03T05:21:06.805Z",
+      "price": 0.86709761,
+      "priceSource": "tatum",
+      "blob_id": "6y-lMe1XkpBG3D0V4Jy65SZliQ0YTxT18vtvap9vki8"
+    }
+  ]
+}
