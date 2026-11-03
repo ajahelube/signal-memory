@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Signal Memory</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{font-family:system-ui;background:#0b0f17;color:#e6edf3;max-width:960px;margin:auto;padding:20px}h1{color:#7ee0c3}section{background:#121a26;border-radius:12px;padding:16px;margin:14px 0}
+table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #223}input,select,button{background:#0b0f17;color:#e6edf3;border:1px solid #345;border-radius:6px;padding:7px;margin:3px}button{background:#2b6;color:#012;font-weight:600;cursor:pointer}
+.chip{display:inline-block;padding:6px 12px;margin:4px;border-radius:20px;background:#1c2738}pre{white-space:pre-wrap;font-size:13px}.muted{color:#8b98a5;font-size:12px}</style></head><body>
+<h1>Signal Memory</h1><p class="muted">A crypto research agent that remembers who was right. Memory on Walrus (Sui mainnet), data via Tatum. Sample sources are fictional.</p>
+<section><h3>Live prices</h3><div id="prices">loading…</div></section>
+<section><h3>Trust leaderboard</h3><table id="lb"></table></section>
+<section><h3>Log a claim</h3><input id="src" placeholder="@source"><select id="asset"><option>SOL</option><option>BTC</option><option>ETH</option><option>SUI</option></select>
+<select id="dir"><option>above</option><option>below</option></select><input id="tgt" type="number" placeholder="target $"><input id="dl" type="date">
+<button onclick="logClaim()">Save to Walrus</button> <button onclick="resolveNow()">Resolve open claims (Tatum)</button><pre id="claimOut"></pre></section>
+<section><h3>Ask the agent</h3><input id="q" style="width:70%" value="who is most reliable on SOL calls?"><button onclick="ask()">Recall</button><pre id="ans"></pre></section>
+<script>
+const $=id=>document.getElementById(id);
+async function prices(){const p=await (await fetch('/api/prices')).json();$('prices').innerHTML=p.map(x=>`<span class=chip>${x.symbol} $${x.usd}</span>`).join('')+`<div class=muted>source: ${p[0].source}</div>`}
+async function lb(){const d=await (await fetch('/api/leaderboard')).json();$('lb').innerHTML='<tr><th>#</th><th>Source</th><th>Trust</th><th>Right</th><th>Wrong</th></tr>'+d.leaderboard.map((r,i)=>`<tr><td>${i+1}</td><td>${r.source}</td><td><b>${r.score}</b></td><td>${r.right}</td><td>${r.wrong}</td></tr>`).join('')}
+async function logClaim(){$('claimOut').textContent='saving to Walrus…';const r=await (await fetch('/api/claim',{method:'POST',body:JSON.stringify({source:$('src').value,asset:$('asset').value,direction:$('dir').value,target:$('tgt').value,deadline:$('dl').value})})).json();$('claimOut').textContent=r.error||`${r.text}\nblob_id: ${r.claim.blob_id}`;lb()}
+async function resolveNow(){$('claimOut').textContent='checking prices and writing outcomes…';const r=await (await fetch('/api/resolve',{method:'POST'})).json();$('claimOut').textContent=r.error||(r.length?r.map(x=>x.text+'\nblob_id: '+x.blob_id).join('\n\n'):'No open price claims.');lb()}
+async function ask(){$('ans').textContent='recalling from Walrus…';const r=await (await fetch('/api/ask?q='+encodeURIComponent($('q').value))).json();$('ans').textContent=r.error||(r.results||r.memories||[]).map(m=>`• ${m.text??m.content} (score ${(1-(m.distance??0)).toFixed(2)})`).join('\n')||JSON.stringify(r,null,2)}
+prices();lb();
+</script></body></html>

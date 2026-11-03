@@ -1,0 +1,17 @@
+{
+  "name": "signal-memory",
+  "version": "1.0.0",
+  "description": "Crypto research agent with Walrus Memory + Tatum",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.mjs",
+    "resolve": "node resolve.mjs --force"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@mysten-incubation/memwal": "^0.1.12"
+  }
+}
