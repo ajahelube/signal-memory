@@ -73,3 +73,7 @@ Account `0x34460a5e49be15c45a947d770ce887f958a9453028d51fa41b56662e6c5cb6ca`, na
 | 12 | `LpIubEcSFWxPFsnySLZsbG8-hMo0P5JYVM0es0wUqKU` | [DEMO] Trust leaderboard snapshot 2026-11-01 (sample data): @alpha_sample 78 (SOL specialist, 2/2), @suiwatch_sample 67 (SUI, 1/1), @ethmaxi_sample 51, @degen_demo 44, @chartwizard_demo 38 (0/1 on SOL). |
 | 13 | `M--ofVG_vKzL8JUi4cweZxwtPoF7Sw8pubujCwf3H78` | Claim logged 2026-11-03: @live_demo predicted SOL above $90 by 2026-11-10. Status: pending. |
 | 14 | `e2DngSNelwjWDCp0jqeRV2zrY4OGv6-88HER9TCQ68s` | Outcome 2026-11-03: @live_demo SOL above $90 call was RIGHT (SOL at $92.18 via coingecko-fallback (set TATUM_API_KEY)). Trust score for @live_demo 50 -> 67. |
+
+## Repository
+
+https://github.com/ajahelube/signal-memory

@@ -82,6 +82,21 @@
       "resolvedAt": "2026-11-03T04:56:42.725Z",
       "price": 92.18,
       "priceSource": "coingecko-fallback (set TATUM_API_KEY)"
+    },
+    {
+      "id": 8,
+      "source": "@alpha_sample",
+      "asset": "SUI",
+      "direction": "above",
+      "target": 0.8,
+      "loggedAt": "2026-11-03T05:21:06.441Z",
+      "deadline": "2026-11-10T00:00:00Z",
+      "demo": true,
+      "outcome": "RIGHT",
+      "resolvedAt": "2026-11-03T05:21:06.805Z",
+      "price": 0.86709761,
+      "priceSource": "tatum",
+      "blob_id": "6y-lMe1XkpBG3D0V4Jy65SZliQ0YTxT18vtvap9vki8"
     }
   ]
 }

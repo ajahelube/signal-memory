@@ -77,4 +77,4 @@ When I asked "who is most reliable on SOL calls?", the agent recalled the two ou
 
 Crypto moves fast and forgets faster. Signal Memory is my small step toward a timeline that remembers.
 
-**Code:** github.com/ajahelube/signal-memory
+**Code:** https://github.com/ajahelube/signal-memory

@@ -107,6 +107,12 @@
       "namespace": "trust-scores",
       "blob_id": "e2DngSNelwjWDCp0jqeRV2zrY4OGv6-88HER9TCQ68s",
       "confirmed_at": "2026-11-03T04:57:03.116Z"
+    },
+    {
+      "text": "Outcome 2026-11-03: @alpha_sample SUI above $0.8 call was RIGHT (SUI at $0.86709761 via tatum). Trust score for @alpha_sample 72 -> 78.",
+      "namespace": "trust-scores",
+      "blob_id": "6y-lMe1XkpBG3D0V4Jy65SZliQ0YTxT18vtvap9vki8",
+      "confirmed_at": "2026-11-03T05:21:30.415Z"
     }
   ],
   "recall": {
