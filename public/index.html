@@ -1,20 +1,145 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Signal Memory</title><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>body{font-family:system-ui;background:#0b0f17;color:#e6edf3;max-width:960px;margin:auto;padding:20px}h1{color:#7ee0c3}section{background:#121a26;border-radius:12px;padding:16px;margin:14px 0}
-table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #223}input,select,button{background:#0b0f17;color:#e6edf3;border:1px solid #345;border-radius:6px;padding:7px;margin:3px}button{background:#2b6;color:#012;font-weight:600;cursor:pointer}
-.chip{display:inline-block;padding:6px 12px;margin:4px;border-radius:20px;background:#1c2738}pre{white-space:pre-wrap;font-size:13px}.muted{color:#8b98a5;font-size:12px}</style></head><body>
-<h1>Signal Memory</h1><p class="muted">A crypto research agent that remembers who was right. Memory on Walrus (Sui mainnet), data via Tatum. Sample sources are fictional.</p>
-<section><h3>Live prices</h3><div id="prices">loading…</div></section>
-<section><h3>Trust leaderboard</h3><table id="lb"></table></section>
-<section><h3>Log a claim</h3><input id="src" placeholder="@source"><select id="asset"><option>SOL</option><option>BTC</option><option>ETH</option><option>SUI</option></select>
-<select id="dir"><option>above</option><option>below</option></select><input id="tgt" type="number" placeholder="target $"><input id="dl" type="date">
-<button onclick="logClaim()">Save to Walrus</button> <button onclick="resolveNow()">Resolve open claims (Tatum)</button><pre id="claimOut"></pre></section>
-<section><h3>Ask the agent</h3><input id="q" style="width:70%" value="who is most reliable on SOL calls?"><button onclick="ask()">Recall</button><pre id="ans"></pre></section>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Signal Memory</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Signal Memory saves crypto calls before the result is known, checks them against real prices, and gives every source a trust score.">
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#0b0f17;color:#e6edf3;margin:0;line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:720px;margin:auto;padding:20px 16px 40px}
+h1{color:#7ee0c3;font-size:28px;margin:4px 0 8px}
+h2{font-size:19px;margin:0 0 12px}
+.lead{font-size:16px;color:#c9d4de;margin:0 0 6px}
+section{background:#121a26;border-radius:16px;padding:18px 16px;margin:16px 0}
+.steps{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.step{display:flex;gap:12px;align-items:flex-start;background:#0e1520;border-radius:12px;padding:12px}
+.num{flex:none;width:30px;height:30px;border-radius:50%;background:#7ee0c3;color:#04221a;font-weight:700;display:flex;align-items:center;justify-content:center}
+.step b{display:block;font-size:15px}.step span{color:#9fb0bf;font-size:14px}
+.askrow{display:flex;gap:8px}
+input,select{font:inherit;font-size:16px;background:#0b0f17;color:#e6edf3;border:1px solid #2c3a4d;border-radius:10px;padding:12px;min-width:0}
+#q{flex:1}
+button{font:inherit;font-size:16px;background:#2bb673;color:#04221a;font-weight:700;border:0;border-radius:10px;padding:12px 16px;cursor:pointer}
+button:disabled{opacity:.6}
+.examples{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+.ex{background:#1c2738;color:#cfe3f5;font-weight:500;font-size:14px;padding:8px 12px;border-radius:20px}
+.summary{font-size:17px;font-weight:600;background:#13281f;border:1px solid #1f5a3f;border-radius:12px;padding:12px 14px;margin:16px 0 12px}
+.card{background:#0e1520;border:1px solid #1d2838;border-radius:12px;padding:14px;margin:10px 0}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px}
+.badge{font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.2px}
+.b-call{background:#22324a;color:#a9c8ff}.b-right{background:#15402b;color:#6ee7a8}.b-wrong{background:#4a1d22;color:#ff9a9a}.b-info{background:#2d2a45;color:#c9bfff}
+.handle{font-weight:700}.date{color:#8b98a5;font-size:13px;margin-left:auto}
+.text{font-size:15px;color:#dbe4ec}
+.trust{margin-top:8px;font-size:14px;color:#9fb0bf}.trust b{color:#e6edf3}
+.up{color:#6ee7a8}.down{color:#ff9a9a}
+.proof{margin-top:8px;font-size:13px;color:#8b98a5}
+.proof summary{cursor:pointer;color:#7ee0c3;list-style:none;display:inline}
+.proof summary::-webkit-details-marker{display:none}
+.blob{word-break:break-all;background:#0b0f17;border-radius:8px;padding:8px;margin-top:6px;color:#c9d4de}
+.blob a{color:#7ee0c3}
+.note{font-size:13px;color:#8b98a5;margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 12px;border-radius:20px;background:#1c2738;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:15px}td,th{padding:9px 6px;border-bottom:1px solid #1f2a3a;text-align:left}th{color:#8b98a5;font-weight:500;font-size:13px}
+td.n{text-align:center}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:8px}.form .full{grid-column:1/-1}
+.notice{background:#1c2738;border-radius:12px;padding:12px 14px;font-size:15px;color:#cfe3f5}
+.muted{color:#8b98a5;font-size:13px}
+@media(min-width:640px){.steps{grid-template-columns:repeat(3,1fr)}.step{flex-direction:column}}
+</style></head><body><div class="wrap">
+
+<h1>Signal Memory</h1>
+<p class="lead">Signal Memory saves crypto calls from X accounts before anyone knows if they are right.</p>
+<p class="lead">Later it checks each call against the real price and gives every account a trust score.</p>
+<p class="lead">Every record is stored on Walrus, so it can't be edited or deleted.</p>
+
+<section><h2>How it works</h2><ol class="steps">
+<li class="step"><div class="num">1</div><div><b>Call saved</b><span>An account says "SOL will hit $200". We save it with the date.</span></div></li>
+<li class="step"><div class="num">2</div><div><b>Price checked</b><span>When the deadline comes, we check the real price.</span></div></li>
+<li class="step"><div class="num">3</div><div><b>Trust score updated</b><span>Right calls raise the score. Wrong calls lower it.</span></div></li>
+</ol></section>
+
+<section id="asksec"><h2>Ask the agent</h2>
+<form class="askrow" onsubmit="event.preventDefault();ask()"><input id="q" placeholder="Ask about any account or coin" value="Who is most reliable on SOL?" aria-label="Your question"><button id="askbtn" type="submit">Ask</button></form>
+<div class="examples"><button class="ex" type="button">Who is most reliable on SOL?</button><button class="ex" type="button">Which calls were wrong?</button><button class="ex" type="button">What is @chartwizard_demo's record?</button></div>
+<div id="ans"></div>
+</section>
+
+<section><h2>Trust leaderboard</h2><table id="lb"><tr><td class="muted">Loading…</td></tr></table>
+<p class="note">Demo data: these sources are sample accounts.</p></section>
+
+<section><h2>Live prices</h2><div id="prices" class="chips"><span class="muted">Loading…</span></div><p class="note">Live prices from Tatum.</p></section>
+
+<section><h2>Add a call</h2>
+<div id="ro" class="notice" hidden>This is a public demo. You can ask questions; adding new calls is turned off.</div>
+<div id="formwrap"><div class="form">
+<input id="src" placeholder="@account" class="full"><select id="asset"><option>SOL</option><option>BTC</option><option>ETH</option><option>SUI</option></select>
+<select id="dir"><option value="above">goes above</option><option value="below">goes below</option></select><input id="tgt" type="number" placeholder="Price $"><input id="dl" type="date">
+<button onclick="logClaim()" class="full">Save to Walrus</button><button onclick="resolveNow()" class="full" style="background:#1c2738;color:#e6edf3">Check open calls now</button></div>
+<p id="claimOut" class="note"></p></div>
+</section>
+
+<p class="muted" style="text-align:center">Records on Walrus (Sui mainnet) · Prices from Tatum · <a href="https://github.com/ajahelube/signal-memory" style="color:#7ee0c3">Source code</a></p>
+</div>
 <script>
 const $=id=>document.getElementById(id);
-async function prices(){const p=await (await fetch('/api/prices')).json();$('prices').innerHTML=p.map(x=>`<span class=chip>${x.symbol} $${x.usd}</span>`).join('')+`<div class=muted>source: ${p[0].source}</div>`}
-async function lb(){const d=await (await fetch('/api/leaderboard')).json();$('lb').innerHTML='<tr><th>#</th><th>Source</th><th>Trust</th><th>Right</th><th>Wrong</th></tr>'+d.leaderboard.map((r,i)=>`<tr><td>${i+1}</td><td>${r.source}</td><td><b>${r.score}</b></td><td>${r.right}</td><td>${r.wrong}</td></tr>`).join('')}
-async function logClaim(){$('claimOut').textContent='saving to Walrus…';const r=await (await fetch('/api/claim',{method:'POST',body:JSON.stringify({source:$('src').value,asset:$('asset').value,direction:$('dir').value,target:$('tgt').value,deadline:$('dl').value})})).json();$('claimOut').textContent=r.error||`${r.text}\nblob_id: ${r.claim.blob_id}`;lb()}
-async function resolveNow(){$('claimOut').textContent='checking prices and writing outcomes…';const r=await (await fetch('/api/resolve',{method:'POST'})).json();$('claimOut').textContent=r.error||(r.length?r.map(x=>x.text+'\nblob_id: '+x.blob_id).join('\n\n'):'No open price claims.');lb()}
-async function ask(){$('ans').textContent='recalling from Walrus…';const r=await (await fetch('/api/ask?q='+encodeURIComponent($('q').value))).json();$('ans').textContent=r.error||(r.results||r.memories||[]).map(m=>`• ${m.text??m.content} (score ${(1-(m.distance??0)).toFixed(2)})`).join('\n')+(r.mode?`\n\nsource: ${r.mode}`:'')||JSON.stringify(r,null,2)}
-prices();lb();fetch('/api/config').then(r=>r.json()).then(c=>{if(c.readOnly)$('claimOut').textContent='Public demo: logging and resolving claims is owner only (they write to Walrus mainnet). Ask the agent below is open to everyone.'}).catch(()=>{});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtDate=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?`${MON[+m[2]-1]} ${+m[3]}, ${m[1]}`:s};
+const money=n=>n>=1000?Math.round(n).toLocaleString('en-US'):n>=1?n.toFixed(2):n.toFixed(4);
+let BOARD=[],CLAIMS=[];
+
+// Turn a raw memory line into a friendly card.
+function parse(t){
+  t=t.replace(/^\[DEMO\]\s*/,'').replace(/\s*\(fictional sample source\)/g,'').replace(/\s*\(sample data\)/g,'');
+  let type='call',date='',m;
+  if(/Trust leaderboard snapshot/i.test(t))type='info';
+  else if(/\bWRONG\b/.test(t))type='wrong';else if(/\bRIGHT\b/.test(t))type='right';
+  if(m=/(\d{4}-\d{2}-\d{2})/.exec(t))date=m[1];
+  const handle=(/@\w+/.exec(t)||[''])[0];
+  const tr=/(\d+)\s*->\s*(\d+)/.exec(t);
+  let s=t.replace(/^(Claim logged|Outcome|Trust leaderboard snapshot)\s*\d{4}-\d{2}-\d{2}:\s*/,'');
+  s=s.replace(/\s*Trust score[^.]*?\d+\s*->\s*\d+[^.]*\./g,'').replace(/;?\s*trust score raised \d+\s*->\s*\d+\.?/gi,'.')
+     .replace(/\s*Asset:[^.]*\./g,'').replace(/\s*Status: pending\./g,'').replace(/\s*Outcome \d{4}-\d{2}-\d{2}: (RIGHT|WRONG)\./g,'')
+     .replace(/ via [^)]*\)+/g,')').replace(/\$(\d+\.\d{3,})/g,(_,n)=>'$'+(+n).toFixed(2))
+     .replace(/\b(\d{4}-\d{2}-\d{2})\b/g,d=>fmtDate(d)).replace(/sub-\$/g,'below $').replace(/(\w)-(\w)/g,'$1 $2')
+     .replace(/call was RIGHT/,'call was right.').replace(/call was WRONG/,'call was wrong.').replace(/\.\s*\(/g,' (').replace(/\.\./g,'.').replace(/\s+/g,' ').trim();
+  if(type==='info')s=s.replace(/@\w+ (\d+)/g,'$& points');
+  return {type,date,handle,s,tr};
+}
+const BADGE={call:['Call','b-call'],right:['Result: RIGHT','b-right'],wrong:['Result: WRONG','b-wrong'],info:['Leaderboard','b-info']};
+function card(m){
+  const p=parse(m.text??m.content??'');const [bl,bc]=BADGE[p.type];
+  let trust='';if(p.tr){const a=+p.tr[1],b=+p.tr[2];trust=`<div class="trust">Trust score: <b>${a} → ${b}</b> <span class="${b>=a?'up':'down'}">${b>=a?'▲':'▼'}</span></div>`}
+  const proof=m.blob_id?`<details class="proof"><summary>✓ Saved on Walrus · View record</summary><div class="blob">Record ID: ${esc(m.blob_id)}<br><a href="https://walruscan.com/mainnet/blob/${encodeURIComponent(m.blob_id)}" target="_blank" rel="noopener">Look it up on Walruscan</a></div></details>`:'';
+  return `<div class="card"><div class="top"><span class="badge ${bc}">${bl}</span>${p.handle&&p.type!=='info'?`<span class="handle">${esc(p.handle)}</span>`:''}<span class="date">${esc(fmtDate(p.date))}</span></div><div class="text">${esc(p.s)}</div>${trust}${proof}</div>`;
+}
+// One plain sentence that answers the question, built from the trust data.
+function summarize(q,items){
+  const ql=q.toLowerCase();const rec=s=>{const c=CLAIMS.filter(x=>x.source===s&&x.outcome);return{r:c.filter(x=>x.outcome==='RIGHT').length,n:c.length}};
+  const sc=s=>(BOARD.find(b=>b.source===s)||{}).score;
+  const h=(/@\w+/.exec(q)||[])[0];
+  if(h){const b=BOARD.find(x=>x.source.toLowerCase()===h.toLowerCase());if(b){const r=rec(b.source);return `${b.source}: ${r.r} of ${r.n} checked calls right, trust ${b.score}/100.`}}
+  if(/wrong|miss|bad|worst|fail/.test(ql)){const w=[...new Set(CLAIMS.filter(c=>c.outcome==='WRONG').map(c=>c.source))];if(w.length)return `${w.length} accounts made wrong calls: ${w.join(', ')}.`}
+  const coin=(/\b(sol|btc|eth|sui)\b/.exec(ql)||[])[1];
+  if(/reliab|trust|best|right|who|top|accurate/.test(ql)){
+    let pool=BOARD;if(coin){const s=new Set(CLAIMS.filter(c=>c.asset&&c.asset.toUpperCase().startsWith(coin.toUpperCase())&&c.outcome).map(c=>c.source));const f=BOARD.filter(b=>s.has(b.source)&&rec(b.source).r>0);if(f.length)pool=f}
+    const b=pool[0];if(b){const r=rec(b.source);return `Most reliable${coin?' on '+coin.toUpperCase():''}: ${b.source}, ${r.r} of ${r.n} calls right${coin?' overall':''}, trust ${b.score}/100.`}
+  }
+  return items.length?`Here is what Signal Memory remembers about that.`:`No saved calls match that yet. Try one of the examples above.`;
+}
+async function ask(){
+  const q=$('q').value.trim();if(!q)return;$('askbtn').disabled=true;$('ans').innerHTML='<p class="note">Looking through saved records…</p>';
+  try{const res=await fetch('/api/ask?q='+encodeURIComponent(q));const r=await res.json();
+    if(r.error){$('ans').innerHTML=`<div class="summary" style="background:#2a1d14;border-color:#6b4a22">${esc(res.status===429?'You have asked a lot of questions. Please wait a little and try again.':r.error)}</div>`;return}
+    if(!BOARD.length)await lb();
+    const items=(r.results||r.memories||[]);
+    $('ans').innerHTML=`<div class="summary">${esc(summarize(q,items))}</div>`+items.map(card).join('')+(items.length?'<p class="note">Demo data: these sources are sample accounts.</p>':'');
+  }catch(e){$('ans').innerHTML='<div class="summary">Something went wrong. Please try again.</div>'}finally{$('askbtn').disabled=false}
+}
+document.querySelectorAll('.ex').forEach(b=>b.onclick=()=>{$('q').value=b.textContent;ask()});
+async function prices(){try{const p=await (await fetch('/api/prices')).json();if(!Array.isArray(p))throw 0;$('prices').innerHTML=p.map(x=>`<span class=chip>${x.symbol} $${money(x.usd)}</span>`).join('')}catch(e){$('prices').innerHTML='<span class="muted">Prices are taking a break. Refresh in a minute.</span>'}}
+async function lb(){const d=await (await fetch('/api/leaderboard')).json();BOARD=d.leaderboard;CLAIMS=d.claims;$('lb').innerHTML='<tr><th>#</th><th>Account</th><th>Trust</th><th class="n">Right</th><th class="n">Wrong</th></tr>'+d.leaderboard.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.source)}</td><td><b>${r.score}</b></td><td class="n up">${r.right}</td><td class="n down">${r.wrong}</td></tr>`).join('')}
+async function logClaim(){$('claimOut').textContent='Saving to Walrus…';const r=await (await fetch('/api/claim',{method:'POST',body:JSON.stringify({source:$('src').value,asset:$('asset').value,direction:$('dir').value,target:$('tgt').value,deadline:$('dl').value})})).json();$('claimOut').textContent=r.error||`${r.text} Record ID: ${r.claim.blob_id}`;lb()}
+async function resolveNow(){$('claimOut').textContent='Checking prices and saving results…';const r=await (await fetch('/api/resolve',{method:'POST'})).json();$('claimOut').textContent=r.error||(r.length?r.map(x=>x.text+' Record ID: '+x.blob_id).join(' '):'No open calls to check.');lb()}
+prices();lb();
+const q0=new URLSearchParams(location.search).get('q');if(q0){$('q').value=q0;ask().then(()=>{if(new URLSearchParams(location.search).has('jump'))$('asksec').scrollIntoView()})}
+fetch('/api/config').then(r=>r.json()).then(c=>{if(c.readOnly){$('ro').hidden=false;$('formwrap').hidden=true}}).catch(()=>{});
 </script></body></html>

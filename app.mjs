@@ -28,9 +28,11 @@ async function prices() {
 }
 // Fallback when live recall is unavailable: simple keyword match over the logged Walrus memories.
 function logSearch(q) {
-  const words = q.toLowerCase().match(/[a-z0-9@_$]+/g) || [];
+  const STOP = new Set(["who","what","which","the","is","are","was","were","most","on","of","for","and","calls","call","about","record","did","does","has","have","how","any","any"]);
+  const words = (q.toLowerCase().match(/[a-z0-9@_$]+/g) || []).map(w => w.replace(/'s$/, "")).filter(w => !STOP.has(w));
+  if (/reliab|trust|best|right/.test(q.toLowerCase())) words.push("right");
   const mems = JSON.parse(fs.readFileSync(LOG)).memories;
-  return mems.map(m => ({ blob_id: m.blob_id, text: m.text, hits: words.filter(w => w.length > 2 && m.text.toLowerCase().includes(w)).length }))
+  return mems.map(m => ({ blob_id: m.blob_id, text: m.text, hits: words.filter(w => w.length > 1 && m.text.toLowerCase().includes(w)).length }))
     .filter(m => m.hits).sort((a, b) => b.hits - a.hits).slice(0, 5)
     .map(({ blob_id, text, hits }) => ({ blob_id, text, distance: 1 - Math.min(1, hits / Math.max(1, words.length)) }));
 }
