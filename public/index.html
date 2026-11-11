@@ -1,13 +1,13 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Signal Memory</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Signal Memory saves crypto calls before the result is known, checks them against real prices, and gives every source a trust score.">
+<meta name="description" content="Signal Memory tracks public crypto calls from opted in creators, stores them on Walrus, checks prices through Tatum, and gives each source a trust score that fades over time.">
 <style>
 *{box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#0b0f17;color:#e6edf3;margin:0;line-height:1.5;-webkit-text-size-adjust:100%}
-.wrap{max-width:720px;margin:auto;padding:20px 16px 40px}
-h1{color:#7ee0c3;font-size:28px;margin:4px 0 8px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#0b0f17;color:#e6edf3;margin:0;line-height:1.5;-webkit-text-size-adjust:100%;overflow-x:hidden}
+.wrap{max-width:720px;margin:auto;padding:20px 16px 48px}
+h1{color:#7ee0c3;font-size:28px;margin:4px 0 8px;letter-spacing:-0.02em}
 h2{font-size:19px;margin:0 0 12px}
-.lead{font-size:16px;color:#c9d4de;margin:0 0 6px}
+.lead{font-size:16px;color:#c9d4de;margin:0 0 8px}
 section{background:#121a26;border-radius:16px;padding:18px 16px;margin:16px 0}
 .steps{display:grid;gap:10px;margin:0;padding:0;list-style:none}
 .step{display:flex;gap:12px;align-items:flex-start;background:#0e1520;border-radius:12px;padding:12px}
@@ -16,11 +16,14 @@ section{background:#121a26;border-radius:16px;padding:18px 16px;margin:16px 0}
 .askrow{display:flex;gap:8px}
 input,select{font:inherit;font-size:16px;background:#0b0f17;color:#e6edf3;border:1px solid #2c3a4d;border-radius:10px;padding:12px;min-width:0}
 #q{flex:1}
-button{font:inherit;font-size:16px;background:#2bb673;color:#04221a;font-weight:700;border:0;border-radius:10px;padding:12px 16px;cursor:pointer}
-button:disabled{opacity:.6}
+button{font:inherit;font-size:16px;background:#2bb673;color:#04221a;font-weight:700;border:0;border-radius:10px;padding:12px 16px;cursor:pointer;min-height:44px}
+button:disabled{opacity:.6;cursor:not-allowed}
+button.secondary{background:#1c2738;color:#e6edf3}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid #7ee0c3;outline-offset:2px}
 .examples{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
-.ex{background:#1c2738;color:#cfe3f5;font-weight:500;font-size:14px;padding:8px 12px;border-radius:20px}
+.ex{background:#1c2738;color:#cfe3f5;font-weight:500;font-size:14px;padding:8px 12px;border-radius:20px;min-height:40px}
 .summary{font-size:17px;font-weight:600;background:#13281f;border:1px solid #1f5a3f;border-radius:12px;padding:12px 14px;margin:16px 0 12px}
+.summary.err{background:#2a1d14;border-color:#6b4a22}
 .card{background:#0e1520;border:1px solid #1d2838;border-radius:12px;padding:14px;margin:10px 0}
 .top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px}
 .badge{font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.2px}
@@ -33,58 +36,86 @@ button:disabled{opacity:.6}
 .proof summary{cursor:pointer;color:#7ee0c3;list-style:none;display:inline}
 .proof summary::-webkit-details-marker{display:none}
 .blob{word-break:break-all;background:#0b0f17;border-radius:8px;padding:8px;margin-top:6px;color:#c9d4de}
-.blob a{color:#7ee0c3}
+a,.blob a{color:#7ee0c3}
 .note{font-size:13px;color:#8b98a5;margin-top:10px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{padding:8px 12px;border-radius:20px;background:#1c2738;font-weight:600}
-table{width:100%;border-collapse:collapse;font-size:15px}td,th{padding:9px 6px;border-bottom:1px solid #1f2a3a;text-align:left}th{color:#8b98a5;font-weight:500;font-size:13px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:15px;min-width:420px}td,th{padding:9px 6px;border-bottom:1px solid #1f2a3a;text-align:left}th{color:#8b98a5;font-weight:500;font-size:13px}
 td.n{text-align:center}
 .form{display:grid;grid-template-columns:1fr 1fr;gap:8px}.form .full{grid-column:1/-1}
 .notice{background:#1c2738;border-radius:12px;padding:12px 14px;font-size:15px;color:#cfe3f5}
 .muted{color:#8b98a5;font-size:13px}
-@media(min-width:640px){.steps{grid-template-columns:repeat(3,1fr)}.step{flex-direction:column}}
+.foot{text-align:center;margin-top:8px}
+.quote-box{background:#0e1520;border:1px solid #1d2838;border-radius:12px;padding:14px;margin-top:12px}
+@media(max-width:399px){.askrow{flex-direction:column}#askbtn{width:100%}}
+@media(min-width:640px){.steps{grid-template-columns:repeat(2,1fr)}.step{flex-direction:column}}
 </style></head><body><div class="wrap">
 
 <h1>Signal Memory</h1>
-<p class="lead">Signal Memory saves crypto calls from X accounts before anyone knows if they are right.</p>
-<p class="lead">Later it checks each call against the real price and gives every account a trust score.</p>
-<p class="lead">Every record is stored on Walrus, so it can't be edited or deleted.</p>
+<p class="lead">Signal Memory tracks public crypto calls from opted in creators, stores them on Walrus with timestamps, checks prices through Tatum, and gives each source a trust score that fades over time.</p>
 
 <section><h2>How it works</h2><ol class="steps">
-<li class="step"><div class="num">1</div><div><b>Call saved</b><span>An account says "SOL will hit $200". We save it with the date.</span></div></li>
-<li class="step"><div class="num">2</div><div><b>Price checked</b><span>When the deadline comes, we check the real price.</span></div></li>
-<li class="step"><div class="num">3</div><div><b>Trust score updated</b><span>Right calls raise the score. Wrong calls lower it.</span></div></li>
+<li class="step"><div class="num">1</div><div><b>Track the call</b><span>An opted in creator makes a public call. We save who said what, and when.</span></div></li>
+<li class="step"><div class="num">2</div><div><b>Store it on Walrus</b><span>The record is written to Walrus with a timestamp, so it cannot be quietly changed later.</span></div></li>
+<li class="step"><div class="num">3</div><div><b>Check the price via Tatum</b><span>When the deadline comes, we check the live price through Tatum.</span></div></li>
+<li class="step"><div class="num">4</div><div><b>Trust score decays</b><span>A right call raises the score and a wrong call lowers it. Older calls fade, so recent ones count more.</span></div></li>
 </ol></section>
 
-<section id="asksec"><h2>Ask the agent</h2>
-<form class="askrow" onsubmit="event.preventDefault();ask()"><input id="q" placeholder="Ask about any account or coin" value="Who is most reliable on SOL?" aria-label="Your question"><button id="askbtn" type="submit">Ask</button></form>
+<section id="asksec"><h2>Try it</h2>
+<p class="note" style="margin-top:0">The box is already filled with a sample question. Tap Ask to see the answer, or pick another example.</p>
+<form class="askrow" onsubmit="event.preventDefault();ask()"><input id="q" placeholder="Ask about any account or coin" value="Who is most reliable on SOL?" aria-label="Your question" autocomplete="off"><button id="askbtn" type="submit">Ask</button></form>
 <div class="examples"><button class="ex" type="button">Who is most reliable on SOL?</button><button class="ex" type="button">Which calls were wrong?</button><button class="ex" type="button">What is @chartwizard_demo's record?</button></div>
-<div id="ans"></div>
+<p id="askmode" class="note" hidden></p>
+<div id="ans" aria-live="polite"></div>
 </section>
 
-<section><h2>Trust leaderboard</h2><table id="lb"><tr><td class="muted">Loading…</td></tr></table>
+<section><h2>Trust leaderboard</h2>
+<div class="tablewrap"><table id="lb"><tr><td class="muted">Loading the leaderboard…</td></tr></table></div>
 <p class="note">Demo data: these sources are sample accounts.</p></section>
 
-<section><h2>Live prices</h2><div id="prices" class="chips"><span class="muted">Loading…</span></div><p class="note">Live prices from Tatum.</p></section>
+<section><h2>Live prices</h2><div id="prices" class="chips"><span class="muted">Loading prices…</span></div><p id="priceNote" class="note">Checking the price source…</p></section>
 
 <section><h2>Add a call</h2>
-<div id="ro" class="notice" hidden>This is a public demo. You can ask questions; adding new calls is turned off.</div>
-<div id="formwrap"><div class="form">
-<input id="src" placeholder="@account" class="full"><select id="asset"><option>SOL</option><option>BTC</option><option>ETH</option><option>SUI</option></select>
-<select id="dir"><option value="above">goes above</option><option value="below">goes below</option></select><input id="tgt" type="number" placeholder="Price $"><input id="dl" type="date">
-<button onclick="logClaim()" class="full">Save to Walrus</button><button onclick="resolveNow()" class="full" style="background:#1c2738;color:#e6edf3">Check open calls now</button></div>
-<p id="claimOut" class="note"></p></div>
+<div id="ro" class="notice">Checking whether new calls can be added…</div>
+<div id="formwrap" hidden><div class="form">
+<input id="src" placeholder="@account" class="full" autocomplete="off"><select id="asset" aria-label="Asset"><option>SOL</option><option>BTC</option><option>ETH</option><option>SUI</option></select>
+<select id="dir" aria-label="Direction"><option value="above">goes above</option><option value="below">goes below</option></select><input id="tgt" type="number" placeholder="Price $" aria-label="Target price"><input id="dl" type="date" aria-label="Deadline">
+<button type="button" id="savebtn" onclick="logClaim()" class="full">Save to Walrus</button><button type="button" id="resolvbtn" onclick="resolveNow()" class="full secondary">Check open calls now</button></div>
+<p id="claimOut" class="note" aria-live="polite"></p></div>
 </section>
 
-<p class="muted" style="text-align:center">Records on Walrus (Sui mainnet) · Prices from Tatum · <a href="https://github.com/ajahelube/signal-memory" style="color:#7ee0c3">Source code</a></p>
+<section id="quotesec"><h2>Paid quotes through swap.io</h2>
+<p class="lead">When a call comes due, one path is to pay swap.io for a single quote in USDC through x402, then save the result on Walrus. This demo does not pay. The button below only asks for the current unpaid price of one quote request.</p>
+<p class="note" style="margin-top:0">This is a quote request for 1 SOL to USDC, not a swap.</p>
+<button type="button" id="quotebtn" class="secondary" onclick="checkQuote()">Check the unpaid quote price</button>
+<div id="quoteOut" class="quote-box" hidden aria-live="polite"></div>
+<p class="note">A test payment was completed on 10 November 2026. <a href="https://solscan.io/tx/2bPAnApd5zyWb4BwVtLi4wZDyKdF6XNuB6sJfm6JSw71FtA6bTw3fUuTY9Tj1VRC7XYv4KCqydKxJPeHXvbstB15" target="_blank" rel="noopener">Open the receipt on Solscan</a>. <a href="https://docs.swap.io/developer-tools/agent-api-x402" target="_blank" rel="noopener">x402 docs</a></p>
+</section>
+
+<p class="muted foot">Records on Walrus (Sui mainnet) · Prices from Tatum · <a href="https://github.com/ajahelube/signal-memory">Source code</a></p>
 </div>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtDate=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?`${MON[+m[2]-1]} ${+m[3]}, ${m[1]}`:s};
-const money=n=>n>=1000?Math.round(n).toLocaleString('en-US'):n>=1?n.toFixed(2):n.toFixed(4);
-let BOARD=[],CLAIMS=[];
+const money=n=>n>=1000?Math.round(n).toLocaleString('en-US'):n>=1?Number(n).toFixed(2):Number(n).toFixed(4);
+const SAMPLE='Who is most reliable on SOL?';
+let BOARD=[],CLAIMS=[],LIVE_RECALL=null;
+
+function setAsking(on){
+  $('askbtn').disabled=on;
+  document.querySelectorAll('.ex').forEach(b=>b.disabled=on);
+}
+
+function showFallbackNote(fromAsk){
+  const el=$('askmode');
+  const fallback=fromAsk===true || LIVE_RECALL===false;
+  if(!fallback){if(LIVE_RECALL===true) el.hidden=true;return}
+  el.hidden=false;
+  el.textContent='This demo answers with keyword search over the saved Walrus memory log, not live recall. Each result still points to a Walrus record.';
+}
 
 // Turn a raw memory line into a friendly card.
 function parse(t){
@@ -114,7 +145,6 @@ function card(m){
 // One plain sentence that answers the question, built from the trust data.
 function summarize(q,items){
   const ql=q.toLowerCase();const rec=s=>{const c=CLAIMS.filter(x=>x.source===s&&x.outcome);return{r:c.filter(x=>x.outcome==='RIGHT').length,n:c.length}};
-  const sc=s=>(BOARD.find(b=>b.source===s)||{}).score;
   const h=(/@\w+/.exec(q)||[])[0];
   if(h){const b=BOARD.find(x=>x.source.toLowerCase()===h.toLowerCase());if(b){const r=rec(b.source);return `${b.source}: ${r.r} of ${r.n} checked calls right, trust ${b.score}/100.`}}
   if(/wrong|miss|bad|worst|fail/.test(ql)){const w=[...new Set(CLAIMS.filter(c=>c.outcome==='WRONG').map(c=>c.source))];if(w.length)return `${w.length} accounts made wrong calls: ${w.join(', ')}.`}
@@ -125,21 +155,103 @@ function summarize(q,items){
   }
   return items.length?`Here is what Signal Memory remembers about that.`:`No saved calls match that yet. Try one of the examples above.`;
 }
+async function readJson(res){
+  const text=await res.text();
+  try{return text?JSON.parse(text):{}}catch{const err=new Error('bad json');err.status=res.status;throw err}
+}
 async function ask(){
-  const q=$('q').value.trim();if(!q)return;$('askbtn').disabled=true;$('ans').innerHTML='<p class="note">Looking through saved records…</p>';
-  try{const res=await fetch('/api/ask?q='+encodeURIComponent(q));const r=await res.json();
-    if(r.error){$('ans').innerHTML=`<div class="summary" style="background:#2a1d14;border-color:#6b4a22">${esc(res.status===429?'You have asked a lot of questions. Please wait a little and try again.':r.error)}</div>`;return}
+  const q=$('q').value.trim();if(!q){$('ans').innerHTML='<div class="summary err">Type a question first, or tap Ask to use the sample.</div>';return}
+  setAsking(true);$('ans').innerHTML='<p class="note">Looking through saved records…</p>';
+  try{const res=await fetch('/api/ask?q='+encodeURIComponent(q));const r=await readJson(res);
+    if(r.error){$('ans').innerHTML=`<div class="summary err">${esc(res.status===429?'You have asked a lot of questions. Please wait a little and try again.':r.error)}</div>`;return}
     if(!BOARD.length)await lb();
     const items=(r.results||r.memories||[]);
-    $('ans').innerHTML=`<div class="summary">${esc(summarize(q,items))}</div>`+items.map(card).join('')+(items.length?'<p class="note">Demo data: these sources are sample accounts.</p>':'');
-  }catch(e){$('ans').innerHTML='<div class="summary">Something went wrong. Please try again.</div>'}finally{$('askbtn').disabled=false}
+    const fallback=String(r.mode||'').includes('fallback')||r.liveRecall===false;
+    if(fallback)LIVE_RECALL=false;
+    if(r.liveRecall===true)LIVE_RECALL=true;
+    showFallbackNote(fallback);
+    const cards=items.map(card).join('');
+    const empty=items.length?'<p class="note">Demo data: these sources are sample accounts.</p>':'';
+    $('ans').innerHTML=`<div class="summary">${esc(summarize(q,items))}</div>`+cards+empty;
+  }catch(e){$('ans').innerHTML='<div class="summary err">Something went wrong. Please try again.</div>'}finally{setAsking(false)}
 }
 document.querySelectorAll('.ex').forEach(b=>b.onclick=()=>{$('q').value=b.textContent;ask()});
-async function prices(){try{const p=await (await fetch('/api/prices')).json();if(!Array.isArray(p))throw 0;$('prices').innerHTML=p.map(x=>`<span class=chip>${x.symbol} $${money(x.usd)}</span>`).join('')}catch(e){$('prices').innerHTML='<span class="muted">Prices are taking a break. Refresh in a minute.</span>'}}
-async function lb(){const d=await (await fetch('/api/leaderboard')).json();BOARD=d.leaderboard;CLAIMS=d.claims;$('lb').innerHTML='<tr><th>#</th><th>Account</th><th>Trust</th><th class="n">Right</th><th class="n">Wrong</th></tr>'+d.leaderboard.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.source)}</td><td><b>${r.score}</b></td><td class="n up">${r.right}</td><td class="n down">${r.wrong}</td></tr>`).join('')}
-async function logClaim(){$('claimOut').textContent='Saving to Walrus…';const r=await (await fetch('/api/claim',{method:'POST',body:JSON.stringify({source:$('src').value,asset:$('asset').value,direction:$('dir').value,target:$('tgt').value,deadline:$('dl').value})})).json();$('claimOut').textContent=r.error||`${r.text} Record ID: ${r.claim.blob_id}`;lb()}
-async function resolveNow(){$('claimOut').textContent='Checking prices and saving results…';const r=await (await fetch('/api/resolve',{method:'POST'})).json();$('claimOut').textContent=r.error||(r.length?r.map(x=>x.text+' Record ID: '+x.blob_id).join(' '):'No open calls to check.');lb()}
+async function prices(){
+  try{
+    const res=await fetch('/api/prices');const p=await readJson(res);
+    if(res.status===429){$('prices').innerHTML='<span class="muted">Price requests are paused for a bit. Refresh in a minute.</span>';$('priceNote').textContent='';return}
+    if(!Array.isArray(p))throw 0;
+    if(!p.length){$('prices').innerHTML='<span class="muted">No prices to show right now.</span>';$('priceNote').textContent='';return}
+    $('prices').innerHTML=p.map(x=>`<span class=chip>${esc(x.symbol)} $${money(x.usd)}</span>`).join('');
+    const srcs=[...new Set(p.map(x=>String(x.source||'')))];
+    if(srcs.length===1&&srcs[0]==='tatum')$('priceNote').textContent='Live prices from Tatum.';
+    else if(srcs.some(s=>s.includes('coingecko')))$('priceNote').textContent='Live prices from CoinGecko, used when Tatum is not connected.';
+    else $('priceNote').textContent='Live prices. The source is labeled by the price feed.';
+  }catch(e){$('prices').innerHTML='<span class="muted">Prices are taking a break. Refresh in a minute.</span>';$('priceNote').textContent='';}
+}
+async function lb(){
+  try{
+    const res=await fetch('/api/leaderboard');const d=await readJson(res);
+    if(!d||!Array.isArray(d.leaderboard))throw 0;
+    BOARD=d.leaderboard;CLAIMS=Array.isArray(d.claims)?d.claims:[];
+    if(!BOARD.length){$('lb').innerHTML='<tr><td class="muted">No scored accounts yet.</td></tr>';return}
+    $('lb').innerHTML='<tr><th>#</th><th>Account</th><th>Trust</th><th class="n">Right</th><th class="n">Wrong</th></tr>'+d.leaderboard.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.source)}</td><td><b>${r.score}</b></td><td class="n up">${r.right}</td><td class="n down">${r.wrong}</td></tr>`).join('');
+  }catch(e){$('lb').innerHTML='<tr><td class="muted">Could not load the leaderboard. Refresh the page to try again.</td></tr>'}
+}
+async function logClaim(){
+  const out=$('claimOut'), btn=$('savebtn'), other=$('resolvbtn');
+  out.textContent='Saving to Walrus…';btn.disabled=true;if(other)other.disabled=true;
+  try{
+    const res=await fetch('/api/claim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({source:$('src').value,asset:$('asset').value,direction:$('dir').value,target:$('tgt').value,deadline:$('dl').value})});
+    const r=await readJson(res);
+    out.textContent=r.error||`${r.text} Record ID: ${r.claim&&r.claim.blob_id?r.claim.blob_id:''}`;
+    if(!r.error)lb();
+  }catch(e){out.textContent='Could not save that call. Please try again.'}
+  finally{btn.disabled=false;if(other)other.disabled=false}
+}
+async function resolveNow(){
+  const out=$('claimOut'), btn=$('resolvbtn'), other=$('savebtn');
+  out.textContent='Checking prices and saving results…';btn.disabled=true;if(other)other.disabled=true;
+  try{
+    const res=await fetch('/api/resolve',{method:'POST'});
+    const r=await readJson(res);
+    out.textContent=r.error||(Array.isArray(r)&&r.length?r.map(x=>x.text+' Record ID: '+x.blob_id).join(' '):'No open calls to check.');
+    if(!r.error)lb();
+  }catch(e){out.textContent='Could not check open calls. Please try again.'}
+  finally{btn.disabled=false;if(other)other.disabled=false}
+}
+function formatUsdcAtomic(atomic){
+  const n=BigInt(String(atomic||'0'));
+  const padded=n.toString().padStart(7,'0');
+  const whole=padded.slice(0,-6);
+  const frac=padded.slice(-6).replace(/0+$/,'')||'0';
+  return `${whole}.${frac} USDC`;
+}
+async function checkQuote(){
+  const box=$('quoteOut'), btn=$('quotebtn');
+  box.hidden=false;btn.disabled=true;
+  box.innerHTML='<p class="note" style="margin:0">Asking swap.io for the unpaid price. No payment will be made.</p>';
+  try{
+    const res=await fetch('/api/quote');const r=await readJson(res);
+    if(res.status===429){box.innerHTML='<p class="note" style="margin:0">This check is paused for a bit. Please try again in a little while.</p>';return}
+    if(r.error){box.innerHTML=`<p class="note" style="margin:0">${esc(r.error)}</p>`;return}
+    const price=r.price||(r.atomic?formatUsdcAtomic(r.atomic):'unavailable');
+    box.innerHTML=`<p style="margin:0 0 8px"><b>Unpaid price:</b> ${esc(price)} on ${esc(r.network||'Solana')}.</p><p class="note" style="margin:0">${esc(r.note||'No payment was made.')}</p>`;
+  }catch(e){box.innerHTML='<p class="note" style="margin:0">Could not reach swap.io. Please try again.</p>'}
+  finally{btn.disabled=false}
+}
 prices();lb();
 const q0=new URLSearchParams(location.search).get('q');if(q0){$('q').value=q0;ask().then(()=>{if(new URLSearchParams(location.search).has('jump'))$('asksec').scrollIntoView()})}
-fetch('/api/config').then(r=>r.json()).then(c=>{if(c.readOnly){$('ro').hidden=false;$('formwrap').hidden=true}}).catch(()=>{});
+fetch('/api/config').then(r=>r.json()).then(c=>{
+  const readOnly=c.readOnly!==false;
+  $('ro').hidden=!readOnly;
+  $('ro').textContent=readOnly?'This is a public demo. You can ask questions; adding new calls is turned off.':'';
+  $('formwrap').hidden=readOnly;
+  if(c.liveRecall===false){LIVE_RECALL=false;showFallbackNote(true)}
+  else if(c.liveRecall===true)LIVE_RECALL=true;
+}).catch(()=>{
+  $('ro').hidden=false;
+  $('ro').textContent='This is a public demo. You can ask questions; adding new calls is turned off.';
+  $('formwrap').hidden=true;
+});
 </script></body></html>

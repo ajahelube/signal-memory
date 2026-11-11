@@ -36,6 +36,49 @@ function logSearch(q) {
     .filter(m => m.hits).sort((a, b) => b.hits - a.hits).slice(0, 5)
     .map(({ blob_id, text, hits }) => ({ blob_id, text, distance: 1 - Math.min(1, hits / Math.max(1, words.length)) }));
 }
+
+// Unpaid swap.io x402 quote price. This never pays; it only reads the HTTP 402.
+const QUOTE_URL = "https://hermes.swap.io/v1/swap/quote";
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const DEMO_PAYER = "11111111111111111111111111111111";
+function formatUsdc(atomic) {
+  const n = BigInt(String(atomic || "0"));
+  const padded = n.toString().padStart(7, "0");
+  const whole = padded.slice(0, -6);
+  const frac = padded.slice(-6).replace(/0+$/, "") || "0";
+  return `${whole}.${frac} USDC`;
+}
+async function unpaidQuote() {
+  const r = await fetch(QUOTE_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      input: { token: SOL_MINT, amount: "1000000000", chainKey: "sol" },
+      output: { token: USDC_MINT, chainKey: "sol" },
+      userAddress: DEMO_PAYER,
+      slippageBps: 50
+    }),
+    signal: AbortSignal.timeout(12000)
+  });
+  const body = await r.json().catch(() => null);
+  if (r.status !== 402 || !body) {
+    return { error: "swap.io did not return an unpaid quote price. Please try again.", status: r.status };
+  }
+  const list = Array.isArray(body.accepts) ? body.accepts : [];
+  const picked = list.find(x => x && (x.network === "solana" || String(x.network).startsWith("solana:")) && x.asset === USDC_MINT) || list[0];
+  if (!picked) return { error: "swap.io returned a 402 with no usable payment option." };
+  const atomic = String(picked.maxAmountRequired ?? picked.amount ?? "0");
+  return {
+    paid: false,
+    status: 402,
+    network: picked.network || "solana",
+    asset: "USDC",
+    atomic,
+    price: formatUsdc(atomic),
+    note: "No payment was made. This is only the unpaid price for one quote request."
+  };
+}
 const json = (res, code, o) => { res.writeHead(code, { "content-type": "application/json", ...(res.req?._rl ? { "x-rate-count": res.req._rl } : {}) }); res.end(JSON.stringify(o)); };
 const body = (req) => new Promise(r => { let s = ""; req.on("data", c => s += c); req.on("end", () => r(s ? JSON.parse(s) : {})); });
 const tooMany = (res) => json(res, 429, { error: "Rate limit reached. Please try again in a little while." });
@@ -43,12 +86,12 @@ export default async function handler(req, res) {
   const u = new URL(req.url, "http://x");
   try {
     if (u.pathname === "/" || u.pathname === "/index.html") { res.writeHead(200, { "content-type": "text/html" }); return res.end(fs.readFileSync(INDEX)); }
-    if (u.pathname === "/api/config") return json(res, 200, { readOnly: READ_ONLY });
+    if (u.pathname === "/api/config") return json(res, 200, { readOnly: READ_ONLY, liveRecall: hasMemWal(), tatum: hasTatum() });
     if (u.pathname === "/api/leaderboard") return json(res, 200, { leaderboard: leaderboard(load().claims), claims: load().claims, tatum: hasTatum() });
     if (u.pathname === "/api/prices") { if (limited(req, "prices", 60, 3600000)) return tooMany(res); return json(res, 200, await prices()); }
     if (u.pathname === "/api/proof") return json(res, 200, JSON.parse(fs.readFileSync(LOG)).memories.map(m => ({ blob_id: m.blob_id, text: m.text })));
     if ((u.pathname === "/api/claim" || u.pathname === "/api/resolve") && READ_ONLY)
-      return json(res, 403, { error: "This public demo is read only. Logging and resolving claims writes to Walrus mainnet, so it is limited to the owner. Try the Ask the agent box below." });
+      return json(res, 403, { error: "This public demo is read only. Logging and resolving claims writes to Walrus mainnet, so it is limited to the owner. Try a sample question below." });
     if (u.pathname === "/api/claim" && req.method === "POST") {
       const b = await body(req); const d = load();
       const c = { id: d.claims.length + 1, source: b.source, asset: b.asset, direction: b.direction, target: Number(b.target), loggedAt: new Date().toISOString(), deadline: b.deadline };
@@ -64,10 +107,16 @@ export default async function handler(req, res) {
       const q = String(u.searchParams.get("q") || "").slice(0, 300).trim();
       if (!q) return json(res, 400, { error: "Type a question first." });
       if (hasMemWal()) {
-        try { const r = await mw.recall({ query: q, limit: 5, namespace: NS }); return json(res, 200, { ...r, mode: "live Walrus Memory recall" }); }
+        try { const r = await mw.recall({ query: q, limit: 5, namespace: NS }); return json(res, 200, { ...r, liveRecall: true, mode: "live Walrus Memory recall" }); }
         catch (e) { console.error("recall failed, using memory log", e.message); }
       }
-      return json(res, 200, { results: logSearch(q), mode: "memory log fallback (each item is a Walrus blob, see blob_id)" });
+      return json(res, 200, { results: logSearch(q), liveRecall: false, mode: "memory log fallback (each item is a Walrus blob, see blob_id)" });
+    }
+    // Unpaid x402 price check only. Never attaches a payment header or wallet key.
+    if (u.pathname === "/api/quote") {
+      if (limited(req, "quote", 10, 3600000)) return tooMany(res);
+      try { return json(res, 200, await unpaidQuote()); }
+      catch { return json(res, 200, { error: "Could not reach swap.io. Please try again." }); }
     }
     json(res, 404, { error: "not found" });
   } catch (e) { console.error(e); json(res, 500, { error: READ_ONLY ? "Something went wrong, please try again." : e.message }); }
