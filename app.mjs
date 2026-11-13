@@ -4,6 +4,7 @@ import { load, save, leaderboard } from "./trust.mjs";
 import { getPrice, hasTatum } from "./tatum.mjs";
 import { resolveAll } from "./resolve.mjs";
 import { mw, NS, rememberWait, hasMemWal } from "./client.mjs";
+import { spendGuard, spendGuardPay, spendGuardConfig } from "./spend-guard.mjs";
 const LOG = new URL("./memories-log.json", import.meta.url);
 const INDEX = new URL("./public/index.html", import.meta.url);
 // Public deployments (Vercel, or READ_ONLY=1) never write or resolve memories; only the owner's local run does.
@@ -117,6 +118,26 @@ export default async function handler(req, res) {
       if (limited(req, "quote", 10, 3600000)) return tooMany(res);
       try { return json(res, 200, await unpaidQuote()); }
       catch { return json(res, 200, { error: "Could not reach swap.io. Please try again." }); }
+    }
+    // Spend Guard (SERV Hackathon 02, Kite track): SERV Reasoning decides whether to pay for a live quote and the cap.
+    if (u.pathname === "/api/spend-guard/config") return json(res, 200, spendGuardConfig());
+    if (u.pathname === "/api/spend-guard" && req.method === "POST") {
+      if (limited(req, "guard", 6, 3600000) || limited({ headers: { "x-forwarded-for": "all" } }, "guard-all", 200, 86400000)) return tooMany(res);
+      const b = await body(req).catch(() => ({}));
+      const q = String(b.q || "").slice(0, 300).trim();
+      if (!q) return json(res, 400, { error: "Type a question first." });
+      const recall = async (qq) => {
+        if (hasMemWal()) { try { return { ...(await mw.recall({ query: qq, limit: 5, namespace: NS })), mode: "live Walrus Memory recall" }; } catch (e) { console.error("recall failed", e.message); } }
+        return { results: logSearch(qq), mode: "memory log fallback" };
+      };
+      try { return json(res, 200, await spendGuard(q, { recall, trust: () => leaderboard(load().claims), quote: unpaidQuote })); }
+      catch (e) { if (!e.code) throw e; return json(res, 200, { error: e.message, code: e.code }); }
+    }
+    if (u.pathname === "/api/spend-guard/pay" && req.method === "POST") {
+      if (READ_ONLY) return json(res, 403, { error: "Real Kite payments run only on the owner's machine with KITE_MODE=kpass." });
+      const b = await body(req).catch(() => ({}));
+      try { return json(res, 200, await spendGuardPay({ requestId: b.requestId, useFallback: !!b.fallback })); }
+      catch (e) { return json(res, 200, { error: e.message, code: e.code || "kite_error" }); }
     }
     json(res, 404, { error: "not found" });
   } catch (e) { console.error(e); json(res, 500, { error: READ_ONLY ? "Something went wrong, please try again." : e.message }); }

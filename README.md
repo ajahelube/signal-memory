@@ -8,6 +8,32 @@ Every time a source (a KOL, a newsletter, an analyst) makes a call, Signal Memor
 
 ![app](screenshots/app.png)
 
+## New for SERV Hackathon 02 (Kite track): Spend Guard
+
+Built during SERV Hackathon 02 (13 to 15 November 2026) on top of the existing Signal Memory. Everything above this section existed before the hackathon; Spend Guard is the new work.
+
+**What it does.** You ask something like "Who is most reliable on SOL, and should I pay for a live quote before I buy?" Signal Memory recalls what it remembers (Walrus Memory), reads the trust leaderboard, and checks the unpaid x402 price of one swap.io quote. **SERV Reasoning** (OpenServ) then decides whether paying is worth it, picks a spend cap, and explains why. If the answer is yes and the live price fits under the cap, a **Kite Passport** spending session is created with exactly that cap, so Kite enforces the limit you approve with your passkey.
+
+```
+ question ─► recall (Walrus) + trust scores + unpaid swap.io 402 price
+          ─► SERV Reasoning  (serv-mini, reasoning_effort low, strict JSON schema)
+               { answer, pay_quote, max_amount_usdc, reason, confidence, abstain }
+          ─► app policy (deterministic): cap = min(SERV cap, hard cap); pay only if price <= cap
+          ─► Kite Passport session (per tx = cap, total = cap, 30 min) ─► paid x402 call
+```
+
+* `serv.mjs`: SERV Reasoning call, versioned system prompt, JSON schema, validation, and distinct errors (no key, no credits, timeout, refusal, truncation, invalid JSON).
+* `spend-guard.mjs`: the pipeline and the deterministic cap policy. The model never does price math or signs anything.
+* `kite.mjs`: the payment step behind one interface. `KITE_MODE=dry-run` (default) pays nothing and labels every result **DRY RUN, NOT PAID**. `KITE_MODE=kpass` runs real `kpass agent:session create / execute` commands. See `KITE_SETUP.md`.
+* Routes: `POST /api/spend-guard` (decision), `POST /api/spend-guard/pay` (owner only, real mode only), `GET /api/spend-guard/config`.
+
+Run it locally:
+
+```bash
+cp .env.example .env   # add SERV_API_KEY
+node --env-file=.env server.mjs
+```
+
 ## Architecture
 
 ```

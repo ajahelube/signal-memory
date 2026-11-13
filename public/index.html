@@ -87,6 +87,14 @@ td.n{text-align:center}
 <p id="claimOut" class="note" aria-live="polite"></p></div>
 </section>
 
+<section id="guardsec"><h2>Spend Guard <span class="badge b-info">New</span></h2>
+<p class="lead">Ask whether the agent should pay for a live swap.io quote. SERV Reasoning from OpenServ reads what Signal Memory remembers, then decides yes or no, sets a spending cap, and explains why. Kite Passport then pays only inside that cap, after you approve it with your passkey.</p>
+<form class="askrow" onsubmit="event.preventDefault();guard()"><input id="gq" value="Who is most reliable on SOL, and should I pay for a live quote before I buy?" aria-label="Spend Guard question" autocomplete="off"><button id="guardbtn" type="submit">Decide</button></form>
+<div class="examples"><button type="button" class="ex" onclick="$('gq').value='Should I buy SOL now because @chartwizard_demo says it will dump?';guard()">Weak source</button><button type="button" class="ex" onclick="$('gq').value='Who was right about BTC last month?';guard()">Memory is enough</button></div>
+<div id="guardOut" aria-live="polite"></div>
+<p id="guardMode" class="note"></p>
+</section>
+
 <section id="quotesec"><h2>Paid quotes through swap.io</h2>
 <p class="lead">When a call comes due, one path is to pay swap.io for a single quote in USDC through x402, then save the result on Walrus. This demo does not pay. The button below only asks for the current unpaid price of one quote request.</p>
 <p class="note" style="margin-top:0">This is a quote request for 1 SOL to USDC, not a swap.</p>
@@ -242,6 +250,28 @@ async function checkQuote(){
   }catch(e){box.innerHTML='<p class="note" style="margin:0">Could not reach swap.io. Please try again.</p>'}
   finally{btn.disabled=false}
 }
+async function guard(){
+  const out=$('guardOut'),btn=$('guardbtn');const q=$('gq').value.trim();if(!q)return;
+  btn.disabled=true;out.innerHTML='<p class="note">Recalling memories, checking the live quote price, and asking SERV Reasoning. This takes about 10 seconds.</p>';
+  try{
+    const res=await fetch('/api/spend-guard',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({q})});const r=await readJson(res);
+    if(res.status===429){out.innerHTML='<div class="summary err">Spend Guard is paused for a bit. Please try again later.</div>';return}
+    if(r.error){out.innerHTML=`<div class="summary err">${esc(r.error)}</div>`;return}
+    const d=r.decision,p=r.policy;
+    const verdict=p.approved?`Yes, pay up to ${p.cap} USDC`:(d.pay_quote?`No payment: ${p.blockedBy==='price_above_cap'?'live price is above the cap':'live price unknown'}`:'No, do not pay');
+    let html=`<div class="summary${p.approved?'':' err'}">${esc(verdict)}</div>`;
+    html+=`<div class="card"><div class="top"><span class="badge b-info">SERV Reasoning</span><span class="date">${esc(r.meta.model)} · ${(r.meta.latencyMs/1000).toFixed(1)}s</span></div><div class="text">${esc(d.answer)}</div><div class="trust"><b>Why:</b> ${esc(d.reason)}</div><div class="trust">Confidence: <b>${esc(d.confidence)}</b> · Live quote price: <b>${esc(r.quote?.price||'unknown')}</b> · App hard cap: <b>${p.hardCapUsdc} USDC</b></div></div>`;
+    if(r.kite){
+      const k=r.kite;
+      if(k.simulated){html+=`<div class="card"><div class="top"><span class="badge b-wrong">DRY RUN, NOT PAID</span><span class="handle">Kite Passport</span></div><div class="text">Session limits: ${k.session.maxPerTx} USDC per payment, ${k.session.maxTotal} USDC total, expires in ${esc(k.session.ttl)}.</div><div class="trust">${esc(k.payment.note)}</div><details class="proof"><summary>Show the Kite commands</summary><div class="blob">${esc(k.session.command)}</div><div class="blob">${esc(k.payment.command)}</div></details></div>`}
+      else{html+=`<div class="card"><div class="top"><span class="badge b-call">Waiting for your passkey</span><span class="handle">Kite Passport</span></div><div class="text">Session limits: ${k.session.maxPerTx} USDC per payment, ${k.session.maxTotal} USDC total, expires in ${esc(k.session.ttl)}.</div>${k.session.approvalUrl?`<div class="trust"><a href="${esc(k.session.approvalUrl)}" target="_blank" rel="noopener">Approve the session</a></div>`:''}</div>`}
+    }else{html+='<p class="note">The agent did not open a Kite session, so nothing was spent.</p>'}
+    html+=`<details class="proof"><summary>Memories SERV saw (${r.evidence.length})</summary>${r.evidence.map(e=>`<div class="blob">${esc(e.text)}</div>`).join('')}</details>`;
+    out.innerHTML=html;
+  }catch(e){out.innerHTML='<div class="summary err">Spend Guard could not finish. Please try again.</div>'}
+  finally{btn.disabled=false}
+}
+fetch('/api/spend-guard/config').then(r=>r.json()).then(c=>{$('guardMode').textContent=c.kiteMode==='kpass'?'Kite payments are live on this server.':'Kite payments are in dry run mode here: the SERV decision is real, the payment step is simulated and clearly marked.'}).catch(()=>{});
 prices();lb();
 const q0=new URLSearchParams(location.search).get('q');if(q0){$('q').value=q0;ask().then(()=>{if(new URLSearchParams(location.search).has('jump'))$('asksec').scrollIntoView()})}
 fetch('/api/config').then(r=>r.json()).then(c=>{
